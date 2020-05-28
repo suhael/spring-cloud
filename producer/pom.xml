@@ -35,14 +35,104 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+
+
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<extensions>true</extensions>
+				<configuration>
+					<portPropertyFile>${project.build.testOutputDirectory}/ports.properties</portPropertyFile>
+					<images>
+						<image>
+							<alias>local-database</alias>
+							<name>postgres:11.5-alpine</name>
+							<run>
+								<ports>
+									<port>5432:5432</port>
+								</ports>
+								<env>
+									<POSTGRES_DB>producer</POSTGRES_DB>
+									<POSTGRESQL_ADMIN_PASSWORD>postgres</POSTGRESQL_ADMIN_PASSWORD>
+								</env>
+								<wait>
+									<log>PostgreSQL init process complete; ready for start up.</log>
+									<time>60000</time>
+								</wait>
+							</run>
+						</image>
+					</images>
+				</configuration>
+				<executions>
+					<execution>
+						<id>docker-container-clean</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>docker-container-start</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>stop</goal>
+							<goal>start</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sql-maven-plugin</artifactId>
+				<dependencies>
+					<dependency>
+						<groupId>org.postgresql</groupId>
+						<artifactId>postgresql</artifactId>
+						<version>9.4.1212.jre7</version>
+					</dependency>
+				</dependencies>
+				<executions>
+					<execution>
+						<id>database-setup</id>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<phase>process-classes</phase>
+						<configuration>
+							<driver>org.postgresql.Driver</driver>
+							<url>jdbc:postgresql://localhost:5432/producer</url>
+							<username>postgres</username>
+							<password>postgres</password>
+							<autocommit>true</autocommit>
+							<srcFiles>
+								<srcFile>src/main/resources/db/postgres/V1_0_0__CreateConsumerTables.sql</srcFile>
+							</srcFiles>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
+
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+
 		</plugins>
 	</build>
 
