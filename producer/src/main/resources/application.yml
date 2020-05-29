@@ -1,40 +1,14 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/producer
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
-    platform: postgresql
-  cloud:
-    stream:
-      bindings:
-        output:
-          destination: myStream
-          content-type: text/plain
-        input:
-          destination: myStream
-          group: myStream-group
-          content-type: text/plain
+cloud.aws.credentials.accessKey: foo
+cloud.aws.credentials.secretKey: bar
+cloud.aws.credentials.instanceProfile: false
+cloud.aws.region.static: eu-central-1
 
+sqs.queue: test-queue
+sqs.queue.sns.fanout: test-queue-sns
+sns.topic: test-topic
 
-cloud:
-  aws:
-    credentials:
-      access-key: foo
-      secret-key: bar
-    region:
-      static: eu-central-1
-    stack:
-      auto: false
-
-#  cloud.aws.credentials.access-key=aws-key
-#  cloud.aws.credentials.secret-key=aws-secret
-#  cloud.aws.region.static=eu-central-1
-#  cloud.aws.stack.auto=false
-#
-#  spring.cloud.stream.bindings.output.destination=myStream
-#  spring.cloud.stream.bindings.output.content-type=text/plain
-#
-#  spring.cloud.stream.bindings.input.destination=myStream
-#  spring.cloud.stream.bindings.input.group=myStream-group
-#  spring.cloud.stream.bindings.input.content-type=text/plain
+localstack:
+  sns:
+    url: http://localhost:4575
+  sqs:
+    url: http://localhost:4576

@@ -16,17 +16,14 @@
 
 	<properties>
 		<java.version>1.8</java.version>
-		<aws-sdk.version>1.11.632</aws-sdk.version>
-		<spring-cloud-stream-kinesis-binder.version>1.2.1.RELEASE</spring-cloud-stream-kinesis-binder.version>
-		<spring-cloud-stream-test.version>2.2.1.RELEASE</spring-cloud-stream-test.version>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>com.amazonaws</groupId>
-				<artifactId>aws-java-sdk-bom</artifactId>
-				<version>1.11.330</version>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-dependencies</artifactId>
+				<version>Finchley.M9</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -37,6 +34,16 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-aws</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-aws-messaging</artifactId>
 		</dependency>
 
 		<dependency>
@@ -51,45 +58,11 @@
 			</exclusions>
 		</dependency>
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
 
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-		</dependency>
-
-		<!--<dependency>-->
-			<!--<groupId>com.amazonaws</groupId>-->
-			<!--<artifactId>amazon-kinesis-client</artifactId>-->
-			<!--<version>1.9.1</version>-->
-		<!--</dependency>-->
-
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-stream-binder-kinesis</artifactId>
-			<version>${spring-cloud-stream-kinesis-binder.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-kinesis</artifactId>
-			<version>${aws-sdk.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-stream-test-support</artifactId>
-			<version>${spring-cloud-stream-test.version}</version>
-			<scope>test</scope>
-		</dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
-
 
 			<plugin>
 				<groupId>io.fabric8</groupId>
@@ -98,7 +71,6 @@
 				<configuration>
 					<portPropertyFile>${project.build.testOutputDirectory}/ports.properties</portPropertyFile>
 					<images>
-
 						<image>
 							<name>localstack/localstack:latest</name>
 							<alias>producer-localstack</alias>
@@ -106,13 +78,11 @@
 								<namingStrategy>alias</namingStrategy>
 								<ports>
 									<port>8081:8080</port>
-									<port>4568:4568</port> <!-- Kinesis -->
-									<port>4569:4569</port> <!-- DynamoDB -->
 									<port>4576:4576</port> <!-- sqs -->
 									<port>4575:4575</port> <!-- sns -->
 								</ports>
 								<env>
-									<SERVICES>kinesis,dynamodb,sqs,sns</SERVICES>
+									<SERVICES>sqs,sns</SERVICES>
 									<DEFAULT_REGION>eu-central-1</DEFAULT_REGION>
 								</env>
 								<wait>
@@ -122,23 +92,6 @@
 							</run>
 						</image>
 
-						<image>
-							<alias>local-database</alias>
-							<name>postgres:11.5-alpine</name>
-							<run>
-								<ports>
-									<port>5432:5432</port>
-								</ports>
-								<env>
-									<POSTGRES_DB>producer</POSTGRES_DB>
-									<POSTGRESQL_ADMIN_PASSWORD>postgres</POSTGRESQL_ADMIN_PASSWORD>
-								</env>
-								<wait>
-									<log>PostgreSQL init process complete; ready for start up.</log>
-									<time>60000</time>
-								</wait>
-							</run>
-						</image>
 					</images>
 				</configuration>
 				<executions>
@@ -159,38 +112,44 @@
 					</execution>
 				</executions>
 			</plugin>
+
 			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>sql-maven-plugin</artifactId>
-				<dependencies>
-					<dependency>
-						<groupId>org.postgresql</groupId>
-						<artifactId>postgresql</artifactId>
-						<version>9.4.1212.jre7</version>
-					</dependency>
-				</dependencies>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.8</version>
 				<executions>
 					<execution>
-						<id>database-setup</id>
+						<id>build</id>
+						<phase>compile</phase>
 						<goals>
-							<goal>execute</goal>
+							<goal>run</goal>
 						</goals>
-						<phase>process-classes</phase>
 						<configuration>
-							<driver>org.postgresql.Driver</driver>
-							<url>jdbc:postgresql://localhost:5432/producer</url>
-							<username>postgres</username>
-							<password>postgres</password>
-							<autocommit>true</autocommit>
-							<srcFiles>
-								<srcFile>src/main/resources/db/postgres/V1_0_0__CreateConsumerTables.sql</srcFile>
-							</srcFiles>
+							<target>
+								<echo>run chmod in ${basedir}</echo>
+								<chmod file="${basedir}/scripts/setup-aws.sh" perm="ugo+rx"/>
+							</target>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
 
-
+			<plugin>
+				<artifactId>exec-maven-plugin</artifactId>
+				<groupId>org.codehaus.mojo</groupId>
+				<executions>
+					<execution>
+						<id>Setup AWS</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>${basedir}/scripts/setup-aws.sh</executable>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
