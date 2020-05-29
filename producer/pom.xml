@@ -16,7 +16,22 @@
 
 	<properties>
 		<java.version>1.8</java.version>
+		<aws-sdk.version>1.11.632</aws-sdk.version>
+		<spring-cloud-stream-kinesis-binder.version>1.2.1.RELEASE</spring-cloud-stream-kinesis-binder.version>
+		<spring-cloud-stream-test.version>2.2.1.RELEASE</spring-cloud-stream-test.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.amazonaws</groupId>
+				<artifactId>aws-java-sdk-bom</artifactId>
+				<version>1.11.330</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<dependency>
@@ -45,6 +60,31 @@
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 		</dependency>
+
+		<!--<dependency>-->
+			<!--<groupId>com.amazonaws</groupId>-->
+			<!--<artifactId>amazon-kinesis-client</artifactId>-->
+			<!--<version>1.9.1</version>-->
+		<!--</dependency>-->
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-stream-binder-kinesis</artifactId>
+			<version>${spring-cloud-stream-kinesis-binder.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-kinesis</artifactId>
+			<version>${aws-sdk.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-stream-test-support</artifactId>
+			<version>${spring-cloud-stream-test.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -58,6 +98,30 @@
 				<configuration>
 					<portPropertyFile>${project.build.testOutputDirectory}/ports.properties</portPropertyFile>
 					<images>
+
+						<image>
+							<name>localstack/localstack:latest</name>
+							<alias>producer-localstack</alias>
+							<run>
+								<namingStrategy>alias</namingStrategy>
+								<ports>
+									<port>8081:8080</port>
+									<port>4568:4568</port> <!-- Kinesis -->
+									<port>4569:4569</port> <!-- DynamoDB -->
+									<port>4576:4576</port> <!-- sqs -->
+									<port>4575:4575</port> <!-- sns -->
+								</ports>
+								<env>
+									<SERVICES>kinesis,dynamodb,sqs,sns</SERVICES>
+									<DEFAULT_REGION>eu-central-1</DEFAULT_REGION>
+								</env>
+								<wait>
+									<log>Ready.</log>
+									<time>30000</time>
+								</wait>
+							</run>
+						</image>
+
 						<image>
 							<alias>local-database</alias>
 							<name>postgres:11.5-alpine</name>
